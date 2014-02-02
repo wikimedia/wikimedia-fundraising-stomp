@@ -18,6 +18,8 @@
 
 /* vim: set expandtab tabstop=3 shiftwidth=3: */
 
+define( 'STOMP_MAX_RECONNECT_ATTEMPTS', 3 );
+
 require_once 'Stomp/Frame.php';
 
 /**
@@ -479,7 +481,7 @@ class Stomp
 	 * @param Stomp_Frame $stompFrame
 	 * @throws Stomp_Exception
 	 */
-    protected function _writeFrame ( Stomp_Frame $stompFrame )
+    protected function _writeFrame ( Stomp_Frame $stompFrame, $attempt = 0 )
     {
         if ( !is_resource( $this->_socket ) ) {
             require_once 'Stomp/Exception.php';
@@ -490,8 +492,11 @@ class Stomp
 
         $r = fwrite( $this->_socket, $data, strlen( $data ) );
         if ( $r === false || $r == 0 ) {
+            if ( $attempt >= STOMP_MAX_RECONNECT_ATTEMPTS ) {
+                throw new Stomp_Exception( 'Could not write to a dead connection, made ' . STOMP_MAX_RECONNECT_ATTEMPTS . ' reconnection attempts.' );
+            }
             $this->_reconnect();
-            $this->_writeFrame( $stompFrame );
+            $this->_writeFrame( $stompFrame, $attempt + 1 );
         }
     }
 
